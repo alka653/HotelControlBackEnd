@@ -37,6 +37,12 @@ class TipoSensor(db.Model):
 		self.nombre_tipo = nombre_tipo
 		self.slug_tipo = slug_tipo
 
+	def get_all_serialize(self):
+		return {
+			'nombre_tipo': self.nombre_tipo,
+			'slug_tipo': self.slug_tipo
+		}
+
 	@staticmethod
 	def save(self):
 		data = TipoSensor(nombre_tipo = self['nombre_tipo'], slug_tipo = slugify(self['nombre_tipo']))
@@ -55,6 +61,7 @@ class Area(db.Model):
 	nombre_area = db.Column(db.String(50))
 	slug_area = db.Column(db.String(100))
 	estado_id = db.Column(db.Integer, db.ForeignKey('estados.id'))
+	areas_consumos_tolerables = db.relationship('AreaConsumoTolerable', backref = 'area', lazy = 'dynamic')
 
 	def __init__(self, nombre_area, estado_id, slug_area):
 		self.nombre_area = nombre_area
@@ -77,6 +84,7 @@ class Area(db.Model):
 		return {
 			'slug_area': self.slug_area,
 			'nombre_area': self.nombre_area,
+			'consumo_tolerable': [consumo.get_all_serialize() for consumo in self.areas_consumos_tolerables]
 		}
 
 class AreaConsumoTolerable(db.Model):
@@ -84,12 +92,18 @@ class AreaConsumoTolerable(db.Model):
 	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
 	area_id = db.Column(db.Integer, db.ForeignKey('areas.id'))
 	tipo_sensor_id = db.Column(db.Integer, db.ForeignKey('tipos_sensores.id'))
+	tipo_sensor = db.relationship('TipoSensor', backref = 'tipo_sensor')
 	medida_tolerable = db.Column(db.Float(precision = 2))
 
 	def __init__(self, area_id, tipo_sensor_id, medida_tolerable):
 		self.area_id = area_id
 		self.tipo_sensor_id = tipo_sensor_id
 		self.medida_tolerable = medida_tolerable
+
+	def get_all_serialize(self):
+		return {
+			'tipo_sensor': self.tipo_sensor.get_all_serialize()
+		}
 
 	@staticmethod
 	def delete_all():

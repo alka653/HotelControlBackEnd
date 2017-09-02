@@ -12,6 +12,11 @@ def data_init():
 	area_1 = Area.save({'nombre_area': 'Lavanderia', 'estado_id': estado_activo.id})
 	area_2 = Area.save({'nombre_area': 'Juntas', 'estado_id': estado_activo.id})
 	click.echo('Areas creados')
+	AreaConsumoTolerable.save({'area_id': area_1.id, 'tipo_sensor_id': tipo_agua.id, 'medida_tolerable': 5.18})
+	AreaConsumoTolerable.save({'area_id': area_1.id, 'tipo_sensor_id': tipo_energia.id, 'medida_tolerable': 15})
+	AreaConsumoTolerable.save({'area_id': area_2.id, 'tipo_sensor_id': tipo_agua.id, 'medida_tolerable': 5.18})
+	AreaConsumoTolerable.save({'area_id': area_2.id, 'tipo_sensor_id': tipo_energia.id, 'medida_tolerable': 15})
+	click.echo('Consumo tolerable creados')
 
 if __name__ == '__main__':
 	data_init()
