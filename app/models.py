@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from settings import application
 from slugify import slugify
+from utils import *
 import datetime
 
 db = SQLAlchemy(application)
@@ -11,13 +12,14 @@ class Estado(db.Model):
 	nombre_estado = db.Column(db.String(20))
 	slug_estado = db.Column(db.String(40))
 
-	def __init__(self, nombre_estado, slug_estado):
+	def __init__(self, id, nombre_estado, slug_estado):
+		self.id = id
 		self.nombre_estado = nombre_estado
 		self.slug_estado = slug_estado
 
 	@staticmethod
 	def save(self):
-		data = Estado(nombre_estado = self['nombre_estado'], slug_estado = slugify(self['nombre_estado']))
+		data = Estado(id = self['id'], nombre_estado = self['nombre_estado'], slug_estado = slugify(self['nombre_estado']))
 		db.session.add(data)
 		db.session.commit()
 		return data
@@ -37,10 +39,11 @@ class TipoSensor(db.Model):
 		self.nombre_tipo = nombre_tipo
 		self.slug_tipo = slug_tipo
 
-	def get_all_serialize(self):
+	def get_all_serialize(self, area_id, tipo_sensor_id):
 		return {
 			'nombre_tipo': self.nombre_tipo,
-			'slug_tipo': self.slug_tipo
+			'slug_tipo': self.slug_tipo,
+			'consumo_promedio': consumo_promedio(area_id, tipo_sensor_id, 'now', Sensor, SensorMedida)
 		}
 
 	@staticmethod
@@ -92,7 +95,6 @@ class AreaConsumoTolerable(db.Model):
 	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
 	area_id = db.Column(db.Integer, db.ForeignKey('areas.id'))
 	tipo_sensor_id = db.Column(db.Integer, db.ForeignKey('tipos_sensores.id'))
-	tipo_sensor = db.relationship('TipoSensor', backref = 'tipo_sensor')
 	medida_tolerable = db.Column(db.Float(precision = 2))
 
 	def __init__(self, area_id, tipo_sensor_id, medida_tolerable):
@@ -101,8 +103,9 @@ class AreaConsumoTolerable(db.Model):
 		self.medida_tolerable = medida_tolerable
 
 	def get_all_serialize(self):
+		tipo_sensor = TipoSensor.query.filter_by(id = self.tipo_sensor_id).first()
 		return {
-			'tipo_sensor': self.tipo_sensor.get_all_serialize()
+			'tipo_sensor': tipo_sensor.get_all_serialize(self.area_id, self.tipo_sensor_id)
 		}
 
 	@staticmethod
@@ -122,10 +125,12 @@ class Sensor(db.Model):
 	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
 	identificacion_sensor = db.Column(db.String(10))
 	tipo_sensor_id = db.Column(db.Integer, db.ForeignKey('tipos_sensores.id'))
+	tipo_sensor = db.relationship('TipoSensor', backref = 'tipo_sensor')
 	estado_id = db.Column(db.Integer, db.ForeignKey('estados.id'))
 	area_id = db.Column(db.Integer, db.ForeignKey('areas.id'))
+	area = db.relationship('Area', backref = 'area')
 
-	def __init__(self, area_id, tipo_sensor_id):
+	def __init__(self, identificacion_sensor, area_id, tipo_sensor_id, estado_id):
 		self.identificacion_sensor = identificacion_sensor
 		self.tipo_sensor_id = tipo_sensor_id
 		self.estado_id = estado_id
@@ -139,7 +144,7 @@ class Sensor(db.Model):
 	@staticmethod
 	def save(self):
 		data = Sensor(identificacion_sensor = self['identificacion_sensor'], tipo_sensor_id = self['tipo_sensor_id'], estado_id = self['estado_id'], area_id = self['area_id'])
-		db.session.add(self)
+		db.session.add(data)
 		db.session.commit()
 		return data
 
@@ -147,12 +152,11 @@ class SensorMedida(db.Model):
 	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
 	sensor_id = db.Column(db.Integer(), db.ForeignKey('sensores.id'))
 	medida_sensor = db.Column(db.Float(precision = 2))
-	fecha = db.Column(db.DateTime, default = datetime.datetime.now)
+	fecha = db.Column(db.DateTime, default = datetime.datetime.now())
 
-	def __init__(self, sensor_id, medida_sensor, fecha):
+	def __init__(self, sensor_id, medida_sensor):
 		self.sensor_id = sensor_id
 		self.medida_sensor = medida_sensor
-		self.fecha = fecha
 
 	@staticmethod
 	def delete_all():
@@ -161,7 +165,7 @@ class SensorMedida(db.Model):
 
 	@staticmethod
 	def save(self):
-		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'], fecha = self['fecha'])
-		db.session.add(self)
+		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'])
+		db.session.add(data)
 		db.session.commit()
 		return data
