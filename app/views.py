@@ -12,7 +12,8 @@ rest_api = Blueprint('rest_api', __name__)
 
 @rest_api.route('/area', methods = ['GET'])
 def list_areas():
-	return jsonify({'object': [object_data.get_all_serialize() for object_data in Area.query.filter_by(estado_id = 1).order_by('id asc')]})
+	query = Area.query.filter_by(estado_id = 1)
+	return jsonify({'object': [object_data.get_all_serialize() for object_data in (query if request.args.get('slug_area') is None else query.filter_by(slug_area = request.args.get('slug_area')))]})
 
 @socketio.on('connect', namespace = '/area/promedio/<slug_sensor>/<slug_area>')
 def consumo(slug_sensor, slug_area):
