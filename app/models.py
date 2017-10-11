@@ -3,6 +3,7 @@ from settings import application
 from slugify import slugify
 from utils import *
 import datetime
+import time
 
 db = SQLAlchemy(application)
 
@@ -87,7 +88,8 @@ class Area(db.Model):
 		return {
 			'slug_area': self.slug_area,
 			'nombre_area': self.nombre_area,
-			'consumo_tolerable': [consumo.get_all_serialize() for consumo in self.areas_consumos_tolerables]
+			'consumo_tolerable': [consumo.get_all_serialize() for consumo in self.areas_consumos_tolerables],
+			'sensores': [sensor.get_all_serialize() for sensor in Sensor.query.filter_by(area_id = self.id)]
 		}
 
 class AreaConsumoTolerable(db.Model):
@@ -136,6 +138,13 @@ class Sensor(db.Model):
 		self.estado_id = estado_id
 		self.area_id = area_id
 
+	def get_all_serialize(self):
+		return {
+			'identificacion_sensor': self.identificacion_sensor,
+			'tipo_sensor': self.tipo_sensor.nombre_tipo,
+			'slug_tipo': self.tipo_sensor.slug_tipo
+		}
+
 	@staticmethod
 	def delete_all():
 		db.session.query(Sensor).delete()
@@ -158,6 +167,12 @@ class SensorMedida(db.Model):
 		self.sensor_id = sensor_id
 		self.medida_sensor = medida_sensor
 
+	def get_all_serialize(self):
+		return {
+			'medida_sensor': self.medida_sensor,
+			'fecha': time.mktime(self.fecha.timetuple())
+		}
+
 	@staticmethod
 	def delete_all():
 		db.session.query(SensorMedida).delete()
@@ -165,6 +180,7 @@ class SensorMedida(db.Model):
 
 	@staticmethod
 	def save(self):
+		print datetime.datetime.now()
 		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'])
 		db.session.add(data)
 		db.session.commit()
