@@ -14,7 +14,7 @@ def consumo_promedio(area_id, tipo_sensor_id, date_sql, Sensor, SensorMedida):
 			valor_promedio += promedio.medida_sensor
 			valor_maximo_consumo = promedio.medida_sensor if promedio.medida_sensor > valor_maximo_consumo else valor_maximo_consumo
 		consumo_promedio_mensual = SensorMedida.query.filter_by(sensor_id = sensor.id).filter(extract('year', SensorMedida.fecha) == date.today().year, extract('month', SensorMedida.fecha) == date.today().month).value(func.avg(SensorMedida.medida_sensor))
-	return '{"consumo_promedio_dia":'+str(round(valor_promedio / (contador if contador > 0 else 1), 2))+', "consumo_maximo_dia":'+str(valor_maximo_consumo)+', "consumo_promedio_mensual": '+str(consumo_promedio_mensual)+'}'
+	return '{"consumo_promedio_dia":'+str(round(valor_promedio / (contador if contador > 0 else 1), 2))+', "consumo_maximo_dia":'+str(round(valor_maximo_consumo, 2))+', "consumo_promedio_mensual": '+str(round(consumo_promedio_mensual, 2) if consumo_promedio_mensual > 0 else 0)+'}'
 
 def consumo_real(identificacion_sensor, Sensor, SensorMedida, date_sql):
 	date_sql = date_sql if date_sql != 'now' else date.today()

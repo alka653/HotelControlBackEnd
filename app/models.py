@@ -89,7 +89,8 @@ class Area(db.Model):
 			'slug_area': self.slug_area,
 			'nombre_area': self.nombre_area,
 			'consumo_tolerable': [consumo.get_all_serialize() for consumo in self.areas_consumos_tolerables],
-			'sensores': [sensor.get_all_serialize() for sensor in Sensor.query.filter_by(area_id = self.id)]
+			'sensores': [sensor.get_all_serialize() for sensor in Sensor.query.filter_by(area_id = self.id)],
+			'total_sensores': Sensor.query.filter_by(area_id = self.id).count()
 		}
 
 class AreaConsumoTolerable(db.Model):
@@ -163,9 +164,10 @@ class SensorMedida(db.Model):
 	medida_sensor = db.Column(db.Float(precision = 2))
 	fecha = db.Column(db.DateTime, default = datetime.datetime.now())
 
-	def __init__(self, sensor_id, medida_sensor):
+	def __init__(self, sensor_id, medida_sensor, fecha):
 		self.sensor_id = sensor_id
 		self.medida_sensor = medida_sensor
+		self.fecha = fecha
 
 	def get_all_serialize(self):
 		return {
@@ -181,7 +183,7 @@ class SensorMedida(db.Model):
 	@staticmethod
 	def save(self):
 		print datetime.datetime.now()
-		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'])
+		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'], fecha = datetime.datetime.now())
 		db.session.add(data)
 		db.session.commit()
 		return data
