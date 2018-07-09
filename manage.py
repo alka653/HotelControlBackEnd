@@ -11,4 +11,4 @@ if __name__ == "__main__":
 		db.create_all()
 
 	#application.run(debug = Settings.DEBUG, port = 8000)
-	socketio.run(application)
+	socketio.run(application, host = "0.0.0.0")
