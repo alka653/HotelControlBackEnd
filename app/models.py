@@ -3,9 +3,9 @@ from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSign
 from flask_sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
 from slugify import slugify
-from constants import *
+from .constants import *
 from settings import *
-from utils import *
+from .utils import *
 import datetime
 import random
 import time
@@ -21,10 +21,8 @@ class User(db.Model):
 	password_hash = db.Column(db.String(255))
 	token = db.Column(db.String(300))
 
-	def __init__(self, username, nombre, password):
-		self.username = username
-		self.nombre = nombre
-		self.password_hash = password
+	def __init__(self, **kwargs):
+		super(User, self).__init__(**kwargs)
 
 	def generate_token(self):
 		return Serializer(Settings.SECRET_KEY).dumps({'id': self['id']})
@@ -67,10 +65,8 @@ class Estado(db.Model):
 	nombre_estado = db.Column(db.String(20))
 	slug_estado = db.Column(db.String(40))
 
-	def __init__(self, id, nombre_estado, slug_estado):
-		self.id = id
-		self.nombre_estado = nombre_estado
-		self.slug_estado = slug_estado
+	def __init__(self, **kwargs):
+		super(Estado, self).__init__(**kwargs)
 
 	@staticmethod
 	def save(self):
@@ -90,9 +86,8 @@ class TipoSensor(db.Model):
 	nombre_tipo = db.Column(db.String(20))
 	slug_tipo = db.Column(db.String(40))
 
-	def __init__(self, nombre_tipo, slug_tipo):
-		self.nombre_tipo = nombre_tipo
-		self.slug_tipo = slug_tipo
+	def __init__(self, **kwargs):
+		super(TipoSensor, self).__init__(**kwargs)
 
 	def get_all_serialize(self, area_id = '', tipo_sensor_id = ''):
 		data = {
@@ -124,11 +119,8 @@ class PrecioConsumoMes(db.Model):
 	fecha_ingreso = db.Column(db.DateTime, default = datetime.datetime.now())
 	fecha_modificado = db.Column(db.DateTime, nullable = True)
 
-	def __init__(self, mes, tipo_sensor_id, precio_base, fecha_ingreso):
-		self.mes = mes
-		self.tipo_sensor_id = tipo_sensor_id
-		self.precio_base = precio_base
-		self.fecha_ingreso = fecha_ingreso
+	def __init__(self, **kwargs):
+		super(PrecioConsumoMes, self).__init__(**kwargs)
 
 	@staticmethod
 	def save(self):
@@ -140,6 +132,7 @@ class PrecioConsumoMes(db.Model):
 	@staticmethod
 	def update(self, id):
 		precio_consumo_mes = PrecioConsumoMes.query.filter_by(id = id).first()
+		precio_consumo_mes.mes = self['mes']
 		precio_consumo_mes.precio_base = self['precio_base']
 		precio_consumo_mes.tipo_sensor_id = self['tipo_sensor_id']
 		precio_consumo_mes.fecha_modificado = datetime.datetime.now()
@@ -147,14 +140,26 @@ class PrecioConsumoMes(db.Model):
 		return True
 
 	def get_all_serialize(self):
-		data = {
-			'mes': DATA_MONTHS[int(self.mes)],
-			'tipo_sensor': {'nombre_tipo': TipoSensor.query.filter_by(id = self.tipo_sensor_id).first().nombre_tipo, 'id_tipo': self.tipo_sensor_id},
+		tipo_sensor = TipoSensor.query.filter_by(id = self.tipo_sensor_id).first()
+		return {
+			'id': self.id,
+			'mes': {
+				'id': self.mes,
+				'nombre_mes': DATA_MONTHS[int(self.mes) - 1]
+			},
+			'tipo_sensor': {
+				'nombre_tipo': tipo_sensor.nombre_tipo,
+				'slug_tipo': tipo_sensor.slug_tipo
+			},
 			'precio_base': self.precio_base,
 			'fecha_ingreso': str(self.fecha_ingreso.year)+'/'+str(self.fecha_ingreso.month)+'/'+str(self.fecha_ingreso.day),
 			'fecha_modificado': (str(self.fecha_modificado.year)+'/'+str(self.fecha_modificado.month)+'/'+str(self.fecha_modificado.day) if self.fecha_modificado else '-')
 		}
-		return data
+
+	@staticmethod
+	def delete(object_id):
+		PrecioConsumoMes.query.filter_by(id = object_id).delete()
+		db.session.commit()
 
 class Area(db.Model):
 	__tablename__ = 'areas'
@@ -164,11 +169,8 @@ class Area(db.Model):
 	estado_id = db.Column(db.Integer, db.ForeignKey('estados.id'))
 	areas_consumos_tolerables = db.relationship('AreaConsumoTolerable', backref = 'area', lazy = 'dynamic')
 
-	def __init__(self, id, nombre_area, estado_id, slug_area):
-		self.nombre_area = nombre_area
-		self.estado_id = estado_id
-		self.slug_area = slug_area
-		self.id = id
+	def __init__(self, **kwargs):
+		super(Area, self).__init__(**kwargs)
 
 	@staticmethod
 	def save(self):
@@ -195,7 +197,7 @@ class Area(db.Model):
 		data = {
 			'slug_area': self.slug_area,
 			'nombre_area': self.nombre_area,
-			'consumo_tolerable': [consumo.get_all_serialize() for consumo in self.areas_consumos_tolerables],
+			'consumo_tolerable': [tipo_sensor.get_all_serialize(self.id, tipo_sensor.id) for tipo_sensor in TipoSensor.query.all()],
 			'sensores': [sensor.get_all_serialize() for sensor in Sensor.query.filter_by(area_id = self.id)],
 			'total_sensores': Sensor.query.filter_by(area_id = self.id).count()
 		}
@@ -211,10 +213,8 @@ class AreaConsumoTolerable(db.Model):
 	tipo_sensor_id = db.Column(db.Integer, db.ForeignKey('tipos_sensores.id'))
 	medida_tolerable = db.Column(db.Float(precision = 2))
 
-	def __init__(self, area_id, tipo_sensor_id, medida_tolerable):
-		self.area_id = area_id
-		self.tipo_sensor_id = tipo_sensor_id
-		self.medida_tolerable = medida_tolerable
+	def __init__(self, **kwargs):
+		super(AreaConsumoTolerable, self).__init__(**kwargs)
 
 	def get_all_serialize(self):
 		tipo_sensor = TipoSensor.query.filter_by(id = self.tipo_sensor_id).first()
@@ -244,11 +244,8 @@ class Sensor(db.Model):
 	area_id = db.Column(db.Integer, db.ForeignKey('areas.id'))
 	area = db.relationship('Area', backref = 'area')
 
-	def __init__(self, identificacion_sensor, area_id, tipo_sensor_id, estado_id):
-		self.identificacion_sensor = identificacion_sensor
-		self.tipo_sensor_id = tipo_sensor_id
-		self.estado_id = estado_id
-		self.area_id = area_id
+	def __init__(self, **kwargs):
+		super(Sensor, self).__init__(**kwargs)
 
 	def get_all_serialize(self):
 		return {
@@ -275,15 +272,13 @@ class SensorMedida(db.Model):
 	medida_sensor = db.Column(db.Float(precision = 2))
 	fecha = db.Column(db.DateTime, default = datetime.datetime.now())
 
-	def __init__(self, sensor_id, medida_sensor, fecha):
-		self.sensor_id = sensor_id
-		self.medida_sensor = medida_sensor
-		self.fecha = fecha
+	def __init__(self, **kwargs):
+		super(SensorMedida, self).__init__(**kwargs)
 
 	def get_all_serialize(self):
 		return {
 			'medida_sensor': self.medida_sensor,
-			'fecha': time.mktime(self.fecha.timetuple())
+			'fecha': self.fecha.strftime('%Y:%m:%d:%I:%M:%S')
 		}
 
 	@staticmethod

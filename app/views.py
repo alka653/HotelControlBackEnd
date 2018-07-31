@@ -5,8 +5,8 @@ from flask_httpauth import HTTPTokenAuth
 from boltons.iterutils import remap
 from flask_socketio import emit
 from settings import socketio
-from models import *
-from utils import *
+from .models import *
+from .utils import *
 import json
 
 rest_api = Blueprint('rest_api', __name__)
@@ -15,13 +15,13 @@ auth = HTTPTokenAuth(scheme = 'Token')
 # Model.query.filter_by
 # Model.query.join(ModelForeignKey).add_columns()
 
-@socketio.on('send_data', namespace = '/area/promedio/<slug_sensor>/<slug_area>')
+"""@socketio.on('send_data', namespace = '/area/promedio/<slug_sensor>/<slug_area>')
 def consumo(slug_sensor, slug_area):
-	emit("consumoPromedioGeneral", consumo_promedio(slug_area, slug_sensor, 'now', Sensor, SensorMedida))
+	emit("consumoPromedioGeneral", consumo_promedio(slug_area, slug_sensor, 'now', Sensor, SensorMedida))"""
 
-@socketio.on('send_data_graph', namespace = '/sensor/consumo/<identificacion_sensor>')
+"""@socketio.on('send_data_graph', namespace = '/sensor/consumo/<identificacion_sensor>')
 def consumo_grafico_real(identificacion_sensor):
-	emit("consumoGraficoReal", consumo_real(identificacion_sensor, 'now'))
+	emit("consumoGraficoReal", consumo_real(identificacion_sensor))"""
 
 @rest_api.route('/type-sensor', methods = ['GET'])
 def list_type_sensor():
@@ -36,22 +36,23 @@ def list_areas(mode):
 
 @rest_api.route('/area/<slug_area>/sensor/guardar', methods = ['POST'])
 def receive_sensor_area(slug_area):
+	data = json.loads(request.data)
 	area_id = Area.query.filter_by(slug_area = slug_area).first().id
-	identificacion_sensor = json.loads(request.data)['identificacion_sensor']
-	tipo_sensor_id = TipoSensor.query.filter_by(slug_tipo = json.loads(request.data)['tipo_sensor']).first().id
+	identificacion_sensor = data['identificacion_sensor']
+	tipo_sensor_id = TipoSensor.query.filter_by(slug_tipo = data['tipo_sensor']).first().id
 	Sensor.save({'identificacion_sensor': identificacion_sensor, 'tipo_sensor_id': tipo_sensor_id, 'area_id': area_id, 'estado_id': 1})
 	return jsonify({'response': 'Sensor guardado con éxito'})
 
 @rest_api.route('/sensor/<identificacion_sensor>/consumo-dia', methods = ['GET'])
 def consumo_detallado_dia(identificacion_sensor):
-	return jsonify(consumo_real(identificacion_sensor, Sensor, SensorMedida, 'now'))
+	return jsonify(consumo_real(identificacion_sensor, Sensor, SensorMedida, 'json'))
 
 @rest_api.route('/area/consumo/<identificacion_sensor>/<consumo>', methods = ['GET'])
 def consumo_promedio_area(identificacion_sensor, consumo):
 	sensor = Sensor.query.filter_by(identificacion_sensor = identificacion_sensor).first()
 	sensor_medida = SensorMedida.save({'sensor_id': sensor.id, 'medida_sensor': consumo})
 	socketio.emit('consumoPromedioGeneral', consumo_promedio(sensor.area.id, sensor.tipo_sensor.id, 'now', Sensor, SensorMedida), namespace = '/area/promedio/'+sensor.tipo_sensor.slug_tipo+'/'+sensor.area.slug_area)
-	socketio.emit('consumoGraficoReal', consumo_real(sensor.identificacion_sensor, Sensor, SensorMedida, 'now'), namespace = '/sensor/consumo/'+sensor.identificacion_sensor)
+	socketio.emit('consumoGraficoReal', consumo_real(sensor.identificacion_sensor, Sensor, SensorMedida), namespace = '/sensor/consumo/'+sensor.identificacion_sensor)
 	return jsonify({'response': 'Dato guardado con exito'})
 
 @rest_api.route('/area/guardar', methods = ['POST'])
@@ -69,12 +70,15 @@ def receive_update_area_name(slug_area_old):
 @rest_api.route('/configuracion/precio-consumo', methods = ['GET'])
 def lista_precio_consumo():
 	drop_falsey = lambda path, key, value: bool(value)
-	query = PrecioConsumoMes.query.order_by('fecha_ingreso DESC')
-	data = [object_data.get_all_serialize() for object_data in query]
-	return jsonify({'object': remap(data, visit = drop_falsey)})
+	query = PrecioConsumoMes.query
+	data = {}
+	for object_data in query:
+		content_data = object_data.get_all_serialize()
+		data[content_data['id']] = content_data
+	return jsonify({'object': data})
 
 @rest_api.route('/configuracion/precio-consumo', methods = ['POST'])
-def lista_precio_consumo_save():
+def precio_consumo_save():
 	date_now = datetime.datetime.now()
 	message = 'Datos guardados con éxito'
 	data = json.loads(request.data)
@@ -84,6 +88,18 @@ def lista_precio_consumo_save():
 	else:
 		PrecioConsumoMes.save({'mes': data['mes'], 'tipo_sensor_id': tipo_sensor_id, 'precio_base': float(data['precio_base'])})
 	return jsonify({'response': message})
+
+@rest_api.route('/configuracion/precio-consumo/<precio_consumo_id>', methods = ['POST'])
+def precio_consumo_update(precio_consumo_id):
+	data = json.loads(request.data)
+	tipo_sensor_id = TipoSensor.query.filter_by(slug_tipo = data['tipo_sensor']).first().id
+	PrecioConsumoMes.update({'mes': data['mes'], 'tipo_sensor_id': tipo_sensor_id, 'precio_base': float(data['precio_base'])}, precio_consumo_id)
+	return jsonify({'response': 'Datos actualizados con éxito'})
+
+@rest_api.route('/configuracion/precio-consumo/<precio_consumo_id>/eliminar', methods = ['GET'])
+def precio_consumo_delete(precio_consumo_id):
+	PrecioConsumoMes.delete(precio_consumo_id)
+	return jsonify({'response': 'Eliminado con éxito'})
 
 # LATER
 
