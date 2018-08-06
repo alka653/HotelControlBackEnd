@@ -148,6 +148,7 @@ class PrecioConsumoMes(db.Model):
 				'nombre_mes': DATA_MONTHS[int(self.mes) - 1]
 			},
 			'tipo_sensor': {
+				'id': self.tipo_sensor_id,
 				'nombre_tipo': tipo_sensor.nombre_tipo,
 				'slug_tipo': tipo_sensor.slug_tipo
 			},
@@ -189,6 +190,13 @@ class Area(db.Model):
 		return new_slug_area
 
 	@staticmethod
+	def update_state(self, slug_area):
+		area = Area.query.filter_by(slug_area = slug_area).first()
+		area.estado_id = self['estado_id']
+		db.session.commit()
+		return True
+
+	@staticmethod
 	def delete_all():
 		db.session.query(Area).delete()
 		db.session.commit()
@@ -196,6 +204,7 @@ class Area(db.Model):
 	def get_all_serialize(self, mode):
 		data = {
 			'slug_area': self.slug_area,
+			'estado_id': self.estado_id,
 			'nombre_area': self.nombre_area,
 			'consumo_tolerable': [tipo_sensor.get_all_serialize(self.id, tipo_sensor.id) for tipo_sensor in TipoSensor.query.all()],
 			'sensores': [sensor.get_all_serialize() for sensor in Sensor.query.filter_by(area_id = self.id)],

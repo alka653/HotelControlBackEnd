@@ -16,6 +16,45 @@ def consumo_promedio(area_id, tipo_sensor_id, date_sql, Sensor, SensorMedida):
 		consumo_promedio_mensual = SensorMedida.query.filter_by(sensor_id = sensor.id).filter(extract('year', SensorMedida.fecha) == date.today().year, extract('month', SensorMedida.fecha) == date.today().month).value(func.avg(SensorMedida.medida_sensor))
 	return '{"consumo_promedio_dia":'+str(round(valor_promedio / (contador if contador > 0 else 1), 2))+', "consumo_maximo_dia":'+str(round(valor_maximo_consumo, 2))+', "consumo_promedio_mensual": '+str(round(consumo_promedio_mensual, 2) if consumo_promedio_mensual is not None else 0)+'}'
 
+def comsumo_promedio_por_mes(mes, fecha, tipo_sensor_id, Sensor, SensorMedida):
+	conteo = 0
+	promedio = 0
+	last_date = []
+	suma_total = 0
+	suma_dia = 0
+	last_date_know = []
+	anio = fecha.split('/')
+	sensor_list = [sensor.id for sensor in Sensor.query.filter_by(tipo_sensor_id = tipo_sensor_id).order_by('tipo_sensor_id ASC').all()]
+	for object_data in SensorMedida.query.filter(SensorMedida.sensor_id.in_(sensor_list)).filter(extract('year', SensorMedida.fecha) == anio[0]).filter(extract('month', SensorMedida.fecha) == mes).order_by('fecha ASC').all():
+		content = object_data.get_all_serialize()
+		last_date = content['fecha'].split(':')
+		if last_date_know:
+			if last_date_know[2] == last_date[2]:
+				promedio += content['medida_sensor']
+				conteo += 1
+				if last_date_know[3] != last_date[3]:
+					suma_dia += (promedio / conteo)
+					promedio = 0
+					conteo = 1
+			else:
+				if suma_dia > 0:
+					if suma_total > 0:
+						suma_total += suma_dia
+					else:
+						suma_total += (promedio / conteo) + suma_dia
+					suma_dia = 0
+				else:
+					suma_total += (promedio / conteo)
+				promedio = content['medida_sensor']
+				conteo = 1
+				last_date_know = last_date
+		else:
+			conteo += 1
+			promedio += content['medida_sensor']
+		last_date_know = last_date
+	suma_total += (promedio / conteo)
+	return suma_total
+
 def consumo_real(identificacion_sensor, Sensor, SensorMedida, all_data = ''):
 	data = []
 	last_date = []
@@ -31,7 +70,9 @@ def consumo_real(identificacion_sensor, Sensor, SensorMedida, all_data = ''):
 		promedio = response['promedio']
 		data = response['data']
 	if all_data == '':
-		data = data[-1]
+		#data = response['data']
+		if data:
+			data = data[-1]
 	return {'object': data}
 	#return {'object': [object_data.get_all_serialize() for object_data in ]}
 
@@ -49,7 +90,7 @@ def group_querie_date(last_date, object_data, conteo, promedio, data):
 			})
 			promedio = 0
 			conteo = 0
-		last_date = content['fecha'].split(':')
+		last_date = date_split
 	else:
 		last_date = date_split
 	return {

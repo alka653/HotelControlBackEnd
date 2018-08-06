@@ -3,6 +3,7 @@ from passlib.apps import custom_app_context as pwd_context
 from flask import Blueprint, request, jsonify, g, abort
 from flask_httpauth import HTTPTokenAuth
 from boltons.iterutils import remap
+from sqlalchemy.sql import func
 from flask_socketio import emit
 from settings import socketio
 from .models import *
@@ -30,7 +31,10 @@ def list_type_sensor():
 @rest_api.route('/area/<mode>', methods = ['GET'])
 def list_areas(mode):
 	drop_falsey = lambda path, key, value: bool(value)
-	query = Area.query.filter_by(estado_id = 1)
+	if mode == 'true':
+		query = Area.query.filter_by(estado_id = 1)
+	else:
+		query = Area.query
 	data = [object_data.get_all_serialize(mode) for object_data in (query if request.args.get('slug_area') is None else query.filter_by(slug_area = request.args.get('slug_area')))]
 	return jsonify({'object': remap(data, visit = drop_falsey)})
 
@@ -67,6 +71,12 @@ def receive_update_area_name(slug_area_old):
 	slug_area = Area.update({'nombre_area': nombre_area}, slug_area_old)
 	return jsonify({'response': 'Área guardada con éxito', 'slug_area': slug_area})
 
+@rest_api.route('/area/estado', methods = ['POST'])
+def change_state():
+	data = json.loads(request.data)
+	Area.update_state({'estado_id': data['estado_id']}, data['slug_area'])
+	return jsonify({'response': 'Estado actualizado con éxito', 'slug_area': data['slug_area']})
+
 @rest_api.route('/configuracion/precio-consumo', methods = ['GET'])
 def lista_precio_consumo():
 	drop_falsey = lambda path, key, value: bool(value)
@@ -74,6 +84,7 @@ def lista_precio_consumo():
 	data = {}
 	for object_data in query:
 		content_data = object_data.get_all_serialize()
+		content_data['consumo_mes'] = comsumo_promedio_por_mes(content_data['mes']['id'], content_data['fecha_ingreso'], content_data['tipo_sensor']['id'], Sensor, SensorMedida)
 		data[content_data['id']] = content_data
 	return jsonify({'object': data})
 
