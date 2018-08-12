@@ -90,7 +90,7 @@ def lista_precio_consumo():
 
 @rest_api.route('/configuracion/precio-consumo', methods = ['POST'])
 def precio_consumo_save():
-	date_now = datetime.datetime.now()
+	date_now = datetime.now()
 	message = 'Datos guardados con éxito'
 	data = json.loads(request.data)
 	tipo_sensor_id = TipoSensor.query.filter_by(slug_tipo = data['tipo_sensor']).first().id

@@ -1,0 +1,6 @@
+{
+  "test_api.py::test_type_sensor": true,
+  "tests/test_api.py": true,
+  "tests/test_area.py": true,
+  "tests/test_flaskr.py": true
+}
