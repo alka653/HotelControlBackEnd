@@ -112,6 +112,11 @@ def precio_consumo_delete(precio_consumo_id):
 	PrecioConsumoMes.delete(precio_consumo_id)
 	return jsonify({'response': 'Eliminado con éxito'})
 
+@rest_api.route('/reporte/consumo-mensual/<fecha_inicio>/<fecha_cierre>', methods = ['GET'])
+def reporte_consumo_rango(fecha_inicio, fecha_cierre):
+	data = consumo_promedio_entre_fecha(fecha_inicio, fecha_cierre, Sensor, SensorMedida, TipoSensor)
+	return jsonify(data)
+
 # LATER
 
 @rest_api.route('/auth/login', methods = ['POST'])
@@ -121,12 +126,12 @@ def auth_login():
 	user = User.query.filter_by(username = content_data['username']).first()
 	if user is not None:
 		if user.verify_password(content_data['password']):
-			token = User.update({'id': user.id})
-			response = {'response': 'success', 'msg': 'Ingreso exitoso', 'token': token}
+			data_auth = User.update({'id': user.id})
+			response = {'logged': True, 'response': 'success', 'msg': 'Ingreso exitoso', 'data': data_auth}
 		else:
-			response = {'response': 'error', 'msg': 'Contraseña incorrecta'}
+			response = {'logged': False, 'response': 'danger', 'msg': 'Contraseña incorrecta'}
 	else:
-		response = {'response': 'error', 'msg': 'Usuario no existente'}
+		response = {'logged': False, 'response': 'danger', 'msg': 'Usuario no existente'}
 	return jsonify(response)
 
 @rest_api.route('/auth/register', methods = ['POST'])

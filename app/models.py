@@ -1,12 +1,12 @@
 # -*- encoding: utf-8 -*-
 from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
+from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask.ext.bcrypt import Bcrypt
 from slugify import slugify
 from .constants import *
 from settings import *
 from .utils import *
-import datetime
 import random
 import time
 
@@ -44,11 +44,11 @@ class User(db.Model):
 
 	@staticmethod
 	def update(self):
-		token = Serializer(Settings.SECRET_KEY).dumps({'id': self['id']})
+		token = Serializer(Settings.SECRET_KEY).dumps({'id': self['id']}).decode('utf-8')
 		user = User.query.filter_by(id = self['id']).first()
 		user.token = token
 		db.session.commit()
-		return token
+		return {'token': token, 'nombre': user.nombre, 'expired': datetime.now()+timedelta(hours=1)}
 
 	@staticmethod
 	def save(self):
@@ -116,7 +116,7 @@ class PrecioConsumoMes(db.Model):
 	mes = db.Column(db.String(1))
 	tipo_sensor_id = db.Column(db.Integer, db.ForeignKey('tipos_sensores.id'))
 	precio_base = db.Column(db.Float(precision = 2))
-	fecha_ingreso = db.Column(db.DateTime, default = datetime.datetime.now())
+	fecha_ingreso = db.Column(db.DateTime, default = datetime.now())
 	fecha_modificado = db.Column(db.DateTime, nullable = True)
 
 	def __init__(self, **kwargs):
@@ -124,7 +124,7 @@ class PrecioConsumoMes(db.Model):
 
 	@staticmethod
 	def save(self):
-		data = PrecioConsumoMes(mes = self['mes'], tipo_sensor_id = self['tipo_sensor_id'], precio_base = self['precio_base'], fecha_ingreso = datetime.datetime.now())
+		data = PrecioConsumoMes(mes = self['mes'], tipo_sensor_id = self['tipo_sensor_id'], precio_base = self['precio_base'], fecha_ingreso = datetime.now())
 		db.session.add(data)
 		db.session.commit()
 		return data
@@ -135,7 +135,7 @@ class PrecioConsumoMes(db.Model):
 		precio_consumo_mes.mes = self['mes']
 		precio_consumo_mes.precio_base = self['precio_base']
 		precio_consumo_mes.tipo_sensor_id = self['tipo_sensor_id']
-		precio_consumo_mes.fecha_modificado = datetime.datetime.now()
+		precio_consumo_mes.fecha_modificado = datetime.now()
 		db.session.commit()
 		return True
 
@@ -279,7 +279,7 @@ class SensorMedida(db.Model):
 	id = db.Column(db.Integer, primary_key = True, autoincrement = True)
 	sensor_id = db.Column(db.Integer(), db.ForeignKey('sensores.id'))
 	medida_sensor = db.Column(db.Float(precision = 2))
-	fecha = db.Column(db.DateTime, default = datetime.datetime.now())
+	fecha = db.Column(db.DateTime, default = datetime.now())
 
 	def __init__(self, **kwargs):
 		super(SensorMedida, self).__init__(**kwargs)
@@ -297,7 +297,7 @@ class SensorMedida(db.Model):
 
 	@staticmethod
 	def save(self):
-		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'], fecha = datetime.datetime.now())
+		data = SensorMedida(sensor_id = self['sensor_id'], medida_sensor = self['medida_sensor'], fecha = datetime.now())
 		db.session.add(data)
 		db.session.commit()
 		return data

@@ -1,4 +1,4 @@
-from sqlalchemy import func, DATE, cast, extract, TIMESTAMP
+from sqlalchemy import func, DATE, cast, extract, TIMESTAMP, and_
 from datetime import date, datetime
 from flask import jsonify
 
@@ -54,6 +54,52 @@ def comsumo_promedio_por_mes(mes, fecha, tipo_sensor_id, Sensor, SensorMedida):
 		last_date_know = last_date
 	suma_total += (promedio / conteo)
 	return suma_total
+
+def consumo_promedio_entre_fecha(fecha_inicio, fecha_cierre, Sensor, SensorMedida, TipoSensor):
+	response = []
+	for tipo_sensor in TipoSensor.query.all():
+		suma_dia = 0
+		promedio = 0
+		conteo = 0
+		data_sensor = []
+		last_date_know = []
+		sensor_list = [sensor.id for sensor in Sensor.query.filter_by(tipo_sensor_id = tipo_sensor.id).order_by('tipo_sensor_id ASC').all()]
+		for object_data in SensorMedida.query.filter(SensorMedida.sensor_id.in_(sensor_list)).filter(and_(SensorMedida.fecha >= fecha_inicio, SensorMedida.fecha <= fecha_cierre)).order_by('fecha ASC').all():
+			content = object_data.get_all_serialize()
+			last_date = content['fecha'].split(':')
+			if last_date_know:
+				if last_date_know[2] == last_date[2]:
+					promedio += content['medida_sensor']
+					conteo += 1
+					if last_date_know[3] != last_date[3]:
+						suma_dia += (promedio / conteo)
+						promedio = 0
+						conteo = 0
+				else:
+					suma_total = 0
+					if suma_dia > 0:
+						if suma_total > 0:
+							suma_total = suma_dia
+						else:
+							suma_total = (promedio / conteo) + suma_dia
+						suma_dia = 0
+					else:
+						suma_total = (promedio / conteo)
+					data_sensor.append({
+						last_date[0]+':'+last_date[1]+':'+last_date[2]: round(suma_total, 2)
+					})
+					promedio = content['medida_sensor']
+					last_date_know = last_date
+					conteo = 1
+			else:
+				conteo += 1
+				promedio += content['medida_sensor']
+			last_date_know = last_date
+		response.append({
+			'label': tipo_sensor.nombre_tipo,
+			'data': data_sensor
+		})
+	return response
 
 def consumo_real(identificacion_sensor, Sensor, SensorMedida, all_data = ''):
 	data = []
