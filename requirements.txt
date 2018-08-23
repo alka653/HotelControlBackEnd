@@ -24,9 +24,9 @@ Flask-RESTful==0.3.6
 Flask-Script==2.0.5
 Flask-SocketIO==2.9.2
 Flask-SQLAlchemy==2.2
-Flask-WeasyPrint==0.5
 gunicorn==19.9.0
 html5lib==1.0.1
+httplib2==0.11.3
 idna==2.7
 itsdangerous==0.24
 Jinja2==2.9.6
@@ -40,6 +40,7 @@ pluggy==0.7.1
 psycopg2==2.7.5
 py==1.5.4
 pycparser==2.18
+PyPDF2==1.26.0
 Pyphen==0.9.4
 pytest==3.7.1
 python-dateutil==2.6.1
@@ -48,6 +49,7 @@ python-engineio==1.7.0
 python-slugify==1.2.4
 python-socketio==1.8.0
 pytz==2017.2
+reportlab==3.5.5
 requests==2.19.1
 six==1.10.0
 SQLAlchemy==1.1.13
