@@ -58,4 +58,4 @@ Unidecode==0.4.21
 urllib3==1.23
 WeasyPrint==0.42.3
 webencodings==0.5.1
-Werkzeug==0.12.2
+Werkzeug==0.15.3
