@@ -38,7 +38,7 @@ pdfrw==0.4
 Pillow==5.2.0
 pluggy==0.7.1
 psycopg2==2.7.5
-py==1.5.4
+py==1.10.0
 pycparser==2.18
 PyPDF2==1.26.0
 Pyphen==0.9.4
