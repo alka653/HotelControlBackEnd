@@ -55,7 +55,7 @@ six==1.10.0
 SQLAlchemy==1.1.13
 tinycss2==0.6.1
 Unidecode==0.4.21
-urllib3==1.23
+urllib3==1.26.5
 WeasyPrint==0.42.3
 webencodings==0.5.1
 Werkzeug==0.12.2
