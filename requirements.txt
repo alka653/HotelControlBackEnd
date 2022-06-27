@@ -49,7 +49,7 @@ python-engineio==1.7.0
 python-slugify==1.2.4
 python-socketio==1.8.0
 pytz==2017.2
-reportlab==3.5.5
+reportlab==3.5.55
 requests==2.19.1
 six==1.10.0
 SQLAlchemy==1.1.13
